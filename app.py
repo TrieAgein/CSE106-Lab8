@@ -9,6 +9,7 @@ from flask import Flask, render_template, jsonify, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
+from flask_admin.contrib.sqla.ajax import QueryAjaxModelLoader
 
 #flask --app app run   use this to run app
 
@@ -16,6 +17,7 @@ app = Flask(__name__)
 
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///example.sqlite"
+app.config["SECRET_KEY"] = "mysecret"
 db = SQLAlchemy(app)
 admin = Admin(app)
 
@@ -26,17 +28,56 @@ app.app_context().push() # without this, I recieve flask error
 # first database = "key, username, password"
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(20), unique=True, nullable=False)
-    password = db.Column(db.String(20), nullable=False)
+    studentName = db.Column(db.String(30), nullable=True)
+    email = db.Column(db.String(30), unique=True, nullable=False)
+    password = db.Column(db.String(30), nullable=False)
+    role = db.Column(db.String(10), nullable=False)
+
 
     def __repr__(self): # how database User is printed out
-    	return f"User('{self.email}', '{self.password}')"
+    	#return f"User('{self.email}', '{self.password}')"
+        return f"User('{self.studentName}')"
+
+
+class Role(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(10), nullable=False)
+
+
+class Registration(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    grade = db.Column(db.Integer)  # Add this if you want to store grades
+
+
 
 # second database = "course name, teacher, time, students enrolled"
+class Course(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    courseName = db.Column(db.String(20), nullable=False)
+    teacher = db.Column(db.String(30), nullable=False)
+    time = db.Column(db.String(20), nullable=False)
+    capacity = db.Column(db.Integer, nullable = False)
 
+    teacher_id = db.Column(db.Integer , db.ForeignKey('user.id'), nullable=False)
+    teacherType = db.relationship("User", backref='courses_taught', foreign_keys=[teacher_id])
+
+
+class CourseView(ModelView):
+    form_columns = ["courseName", "teacherType", "time", "capacity"]
+    column_list = ["courseName", "teacherType", "time", "capacity"]
+
+    form_ajax_refs = {
+        'students': QueryAjaxModelLoader('students', db.session, User, fields=['studentName'])
+    }
 
 
 admin.add_view(ModelView(User, db.session))
+admin.add_view(CourseView(Course, db.session))
+admin.add_view(ModelView(Registration, db.session))
+admin.add_view(ModelView(Role, db.session))
+
 
 
 @app.route('/')
@@ -91,8 +132,12 @@ if __name__ == '__main__':
 # pip install Flask
 # pip install flask-admin
 # pip install -U Flask-SQLAlchemy
-#
+# pip install Flask-Admin[sqla]
 
+
+### create_db.py
+#from app import db
+#db.create_all()
 
 ### how to add in to database using terminal.
 #>>> from app import app      use this to avoid error
