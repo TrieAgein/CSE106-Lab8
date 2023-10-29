@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  
+<!--Tab Name -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal</title>
+</head>
+
+<!--Page Name -->
+<h1> Student Portal </h1>
+
+<!--Message Name -->
+{% for message in get_flashed_messages() %}
+<div>{{message}}</div>
+{% endfor %}
+
+<!--Intended to tell users about what courses they have -->
+<h2>My Courses</h2>
+
+<ul>
+{% for course in courses %}
+  <li>{{course.name}} - {{course.teacher}}</li>  
+{% endfor %}
+</ul>
+
+</html>
+
