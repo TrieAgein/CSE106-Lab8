@@ -1,34 +1,46 @@
 <!-- Login Page -->
 
+<!-- Login: Waifu No Laifu, University -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="static/app.css">
-    <script src="https://kit.fontawesome.com/182976f003.js" crossorigin="anonymous"></script></head>
+    <script src="https://kit.fontawesome.com/182976f003.js" crossorigin="anonymous">
+        
+    </script>
+</head>
+
+    <title>Login page</title>
+
 <body>
+
     <div class="loginBox">
     <i class="fa-solid fa-torii-gate fa-2xl"></i>
     <p class="thick" style="display: inline-block">Weeb Lovers Academy</p>
     <h2>Login</h2>
 
-    <form action="{{ url_for('login') }}" method="post">
-        <label for="username">Email Address</label>
-        <input type="text" id="email" placeholder="" name="email" required>
+    <form action="{{ url_for('login_backend') }}" method="post">
+        <label for="username">Email Address:</label>
+        <input type="text" id="email" name="email" required>
 
         <br>
 
-        <label for="password">Password</label>
+        <label for="password">Password:</label>
         <input type="password" id="password" name="password" required>
 
         <br>
 
         <input type="submit" value="Login">
-
-        <p>New User?</p>
-        <a href="{{ url_for('register_Page') }}">Create an Account</a>
     </form>
+
+    <br></br>
+
+    <p>New User?</p>
+    <a href="{{ url_for('register') }}">Create an Account</a>
+
     </div>
+
 </body>
 </html>

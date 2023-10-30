@@ -1,40 +1,59 @@
 <!-- Register Page -->
 
+<!-- Register: Waifu No Laifu, University -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="static/app.css">
-    <script src="https://kit.fontawesome.com/182976f003.js" crossorigin="anonymous"></script>
+    <script src="https://kit.fontawesome.com/182976f003.js" crossorigin="anonymous">
+    </script>
+
+    <title>Register here</title>
 </head>
 <body>
-    <div class="loginBox">
-    <h2>Create Your Weeb Lovers Account</h2>
 
-    <form action="{{ url_for('register') }}" method="post" onsubmit="redirectToLogin()">
+    <div class="loginBox">
+    <i class="fa-solid fa-torii-gate fa-2xl"></i>
+    <h2 class="thick" style="display: inline-block">Create Your Weeb Lovers Account</h2>
+
+    <form action="{{ url_for('register_backend') }}" method="post" >
         
-        <label for="new_name">Name</label>
+        <label for="new_name">Enter name:</label>
         <input type="text" id="new_name" name="new_name" required>
 
         <br>
 
-        <label for="new_email">Email</label>
+        <label for="new_email">Email:</label>
         <input type="text" id="new_email" name="new_email" required>
 
         <br>
 
-        <label for="new_password">Password</label>
+        <label for="new_password">Create Password:</label>
         <input type="password" id="new_password" name="new_password" required>
 
         <br>
 
-        <input type="submit" value="Create">
+        <label for="account_type">Account Type:</label>
+        <select name="account_type" required>
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+        </select>
+        
+        <br>
+
+        <input type="submit" value="create">
         <p id="updateDisplay" style="display:none;"></p>
-        <p>Already have an account?</p>
-        <a href="{{ url_for('index') }}">Login</a>
     </form>
+
+    <br></br>
+
+    <p>Already have an account?</p>
+    <a href="{{ url_for('login') }}">Login</a>
+
     </div>
+
 </body>
 
 
