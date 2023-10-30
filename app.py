@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
@@ -270,15 +270,17 @@ def login_backend():
 
             elif Email.endswith("@EDUteacher"):
                 # role is 'teacher'                 #this line is where token verification would go
+                # Store the user ID in the session
+                session['user_id'] = user.id
                 return redirect(url_for('portal', name=user.teacherName))
 
             else:
                 pass
                 # role is 'student'                 #this line is where token verification would go
-
-
-            #return f"Logged in as {user.username} with role {user.role}"
-            return redirect(url_for('success', name=user.studentName))
+                #return f"Logged in as {user.username} with role {user.role}"
+                # Store the user ID in the session
+                session['user_id'] = user.id
+                return redirect(url_for('success', name=user.studentName))
 
         else:
             return jsonify({"error": "Password is not correct"}), 404
@@ -301,20 +303,20 @@ def portal(name):
 def register_course(course_id):
     course = Course.query.get(course_id)
 
-    # Decrease the capacity
-    course.counter += 1
-
     # Compare counted students in course to capacity
-    if course.capacity <= course.counter:
+    if course.capacity > course.counter:
         # Get the currently logged in user (you need to implement user authentication)
-        user = User.get_id()
+        user_id = session['user_id']
 
         # Create enrollment
-        enrollment = Enrollment(student=user, course=course)
+        enrollment = Enrollment(student_id=user_id, course_id=course_id)
 
         # Add to the database
         db.session.add(enrollment)
         db.session.commit()
+
+        # Increase the capacity after successful enrollment
+        course.counter += 1
         
         return redirect(url_for('home'))
     else:
