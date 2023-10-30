@@ -5,6 +5,7 @@ from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.sqla.ajax import QueryAjaxModelLoader
 from sqlalchemy import CheckConstraint
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 
 #flask --app app run   use this to run app
 # http://127.0.0.1:5000/ # link to webaddress
@@ -19,7 +20,7 @@ admin = Admin(app)
 app.app_context().push() # without this, I recieve flask error
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     studentName = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(30), unique=True, nullable=False)
@@ -29,6 +30,9 @@ class User(db.Model):
 
     def __repr__(self): # how database relationship User is printed out
        return f"s: '{self.studentName}'"
+    
+    def get_id(self):
+        return str(self.id)
 
 class Teacher(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -74,6 +78,7 @@ class Course(db.Model):
     teacher_id = db.Column(db.Integer, db.ForeignKey('teacher.id'), nullable=False)
     teacher = db.relationship("Teacher", back_populates="courses" )
 
+    counter = db.Column(db.Integer, nullable = False, default = 0)
     def __repr__(self): # how database User is printed out
         return f"Course: '{self.courseName}'"
 
@@ -292,27 +297,28 @@ def portal(name):
 
 
 
-# @app.route('/register_course/<int:course_id>', methods=['POST'])
-# def register_course(course_id):
-#     course = Course.query.get(course_id)
+@app.route('/register_course/<int:course_id>', methods=['POST'])
+def register_course(course_id):
+    course = Course.query.get(course_id)
 
-#     if course.capacity > 0:
-#         # Decrease the capacity
-#         course.capacity -= 1
+    # Decrease the capacity
+    course.counter += 1
 
-#         # Get the currently logged in user (you need to implement user authentication)
-#         user = User.query.get(current_user.id)
+    # Compare counted students in course to capacity
+    if course.capacity <= course.counter:
+        # Get the currently logged in user (you need to implement user authentication)
+        user = User.get_id()
 
-#         # Create enrollment
-#         enrollment = Enrollment(student=user, course=course)
+        # Create enrollment
+        enrollment = Enrollment(student=user, course=course)
 
-#         # Add to the database
-#         db.session.add(enrollment)
-#         db.session.commit()
-
-#         return redirect(url_for('home'))
-#     else:
-#         return "Course is full!"
+        # Add to the database
+        db.session.add(enrollment)
+        db.session.commit()
+        
+        return redirect(url_for('home'))
+    else:
+        return "Course is full!"
 
 
 if __name__ == '__main__':
