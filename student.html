@@ -11,19 +11,33 @@
 <!--Page Name -->
 <h1> Student Portal </h1>
 
-<!--Message Name -->
-{% for message in get_flashed_messages() %}
-<div>{{message}}</div>
-{% endfor %}
+<!-- Navigation bar -->
+<ul class="nav">
+  <li><a href="{{ url_for('student_view', name=current_user.studentName) }}">My Courses</a></li>
+  <li><a href="{{ url_for('all_courses', name = current_user.studentName) }}">All Available Courses</a></li>
+  <li><a href="{{url_for('login')}}"> Logout </a></li>
+</ul>
 
 <!--Intended to tell users about what courses they have -->
 <h2>My Courses</h2>
 
-<ul>
-{% for course in courses %}
-  <li>{{course.name}} - {{course.teacher}}</li>  
-{% endfor %}
-</ul>
+<table>
+  <tr>
+    <th>Course Name</th>
+    <th>Teacher</th> 
+    <th>Time</th>
+    <th>Enrolled Students</th>
+  </tr>
+  
+  {% for course in courses %}
+  <tr>
+    <td>{{ course.courseName }}</td>
+    <td>{{ course.teacher.teacherName }}</td>
+    <td>{{ course.time }}</td> 
+    <td>{{ course.enrollments|length }} / {{ course.capacity }}</td>
+  </tr>
+  {% endfor %}
+  
+</table>
 
 </html>
-
