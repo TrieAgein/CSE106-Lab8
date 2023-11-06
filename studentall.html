@@ -11,7 +11,7 @@
 <!--Page Name -->
 <h1> Student Portal </h1>
 
-<!-- Navigation bar -->
+<!-- Navigation Bar -->
 <ul class="nav">
   <li><a href="{{ url_for('student_view', name=current_user.studentName) }}">My Courses</a></li>
   <li><a href="{{ url_for('all_courses', name = current_user.studentName) }}">All Available Courses</a></li>
