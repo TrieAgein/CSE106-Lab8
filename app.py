@@ -200,6 +200,10 @@ def login():
 def register():
     return render_template('register.html')
 
+@app.route('/courses')
+def courses():
+    return render_template('course_registration.html')
+
 @app.route('/run')
 def run():
 	return "<p>Is indeed running page</p>"
@@ -271,7 +275,7 @@ def login_backend():
             elif Email.endswith("@EDUteacher"):
                 # role is 'teacher'                 #this line is where token verification would go
                 # Store the user ID in the session
-                session['user_id'] = user.id
+                session['user_id'] = user.teacherName
                 return redirect(url_for('portal', name=user.teacherName))
 
             else:
@@ -279,7 +283,7 @@ def login_backend():
                 # role is 'student'                 #this line is where token verification would go
                 #return f"Logged in as {user.username} with role {user.role}"
                 # Store the user ID in the session
-                session['user_id'] = user.id
+                session['user_id'] = user.studentName
                 return redirect(url_for('success', name=user.studentName))
 
         else:
@@ -299,28 +303,43 @@ def portal(name):
 
 
 
-@app.route('/register_course/<int:course_id>', methods=['POST'])
-def register_course(course_id):
-    course = Course.query.get(course_id)
+@app.route('/register_course', methods=['POST'])
+def register_course():
+    course_name = request.form.get("course_name")
+    student_name = request.form.get("student_name")
 
-    # Compare counted students in course to capacity
-    if course.capacity > course.counter:
-        # Get the currently logged in user (you need to implement user authentication)
-        user_id = session['user_id']
+    course = Course.query.filter_by(courseName=course_name).first()
+    print(course_name)
 
-        # Create enrollment
-        enrollment = Enrollment(student_id=user_id, course_id=course_id)
+    if not course:
+        return "Course not found. Please check the course name."
 
-        # Add to the database
+    student = User.query.filter_by(studentName=student_name).first()
+
+    if not student:
+        return "Student not found. Please check the student name."
+
+    if course.capacity > course.counter:  # Check if there is still space in the course
+        # Check if the user is already enrolled in the course
+        existing_enrollment = Enrollment.query.filter_by(student_id=student.id, course_id=course.id).first()
+        if existing_enrollment:
+            return "You are already enrolled in this course."
+
+        # Create an enrollment for the student
+        enrollment = Enrollment(student_id=student.id, course_id=course.id)
+
+        # Add the enrollment to the database
         db.session.add(enrollment)
         db.session.commit()
 
-        # Increase the capacity after successful enrollment
+        # Increase the counter for the course after successful enrollment
         course.counter += 1
-        
-        return redirect(url_for('home'))
+        db.session.commit()
+
+        return redirect(url_for('courses'))  # Redirect to the home page or any other appropriate route
     else:
-        return "Course is full!"
+        return "Course is full! Cannot enroll more students."
+
 
 
 if __name__ == '__main__':
