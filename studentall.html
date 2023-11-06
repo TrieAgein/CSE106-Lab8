@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  
+<!--Tab Name -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal</title>
+</head>
+
+<!--Page Name -->
+<h1> Student Portal </h1>
+
+<!-- Navigation bar -->
+<ul class="nav">
+  <li><a href="{{ url_for('student_view', name=current_user.studentName) }}">My Courses</a></li>
+  <li><a href="{{ url_for('all_courses', name = current_user.studentName) }}">All Available Courses</a></li>
+  <li><a href="{{url_for('login')}}"> Logout </a></li>
+</ul>
+
+<!--Intended to tell users about what courses they have -->
+<h2>All Courses</h2>
+
+<!--Area to recieve Flash Messages -->
+{% for message in get_flashed_messages() %}
+<div>{{message}}</div>
+{% endfor %}
+
+
+<table>
+  <tr>
+    <th>Course Name</th>
+    <th>Teacher</th>
+    <th>Time</th>
+    <th>Enrolled Students</th>
+    <th>Add</th>
+    <th>Remove</th>
+  </tr>
+
+  {% for course in courses %}
+  <tr>
+    <td>{{ course.courseName }}</td>
+    <td>{{ course.teacher.teacherName }}</td>
+    <td>{{ course.time }}</td>
+    <td>{{ course.enrollments|length }} / {{ course.capacity }}</td>
+    <td>
+        <form action="{{ url_for('add_course', course_id=course.id) }}" method="POST">
+          <input type="hidden" name="name" value="{{ current_user.studentName }}">
+          <button type="submit">Add</button>
+        </form>
+    </td>
+    <td>
+        <form action="{{ url_for('drop_course', course_id=course.id) }}" method="POST">
+          <input type="hidden" name="name" value="{{ current_user.studentName }}">
+          <button type="submit">Remove</button>
+        </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+
+</html>
+
