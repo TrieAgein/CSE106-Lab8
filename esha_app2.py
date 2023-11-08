@@ -262,7 +262,7 @@ def login_backend():
 
             elif Email.endswith("@EDUteacher.org"):
                 # role is 'teacher'                 #this line is where token verification would go
-                return redirect(url_for('portal', name=user.teacherName))
+                return redirect(url_for('teacher_view', teacher_id=user.id))
 
             else:
                 pass
@@ -278,78 +278,145 @@ def login_backend():
         return jsonify({"error": "Invalid request: Email not found or invalid login credentials"}), 404
 
 
+# Function to load a student's name
 def loadstudent(name):
     student = User.query.filter_by(studentName=name).first()
     return student
 
+# Student: View
 @app.route('/student_view/<name>')
 def student_view(name):
     
+    # Filter student by name
     student = User.query.filter_by(studentName=name).first()
     
+    # Find what classes they are enrolled into
     enrollments = Enrollment.query.filter_by(student=student).all()
-
+    
+    # Extract courses from the student's enrollment
     courses = [enrollment.course for enrollment in enrollments]
 
-    # You need to pass the 'courses' and 'current_user' to the template
+    # Render it into student html 
     return render_template('student.html', student=student, courses=courses, current_user=student)
 
-
+# Student: Display all courses
 @app.route('/all_courses/<name>')
 def all_courses(name):
     
+    # Filter student by name
     student = User.query.filter_by(studentName=name).first()
     
     # Retrieve all available courses
     all_courses = Course.query.all()
     
+    # Return into student all html
     return render_template('studentall.html', student=student, courses=all_courses, current_user = student)
 
+# Student: Add a Course
 @app.route('/add_course/<int:course_id>', methods=['POST'])
 def add_course(course_id):
-
-  course = Course.query.get(course_id)
-  name = request.form['name']
-  student = loadstudent(name)
-  
-  existing = Enrollment.query.filter_by(student=student, course=course).first()
-  if existing:
-      flash("Already enrolled in this course!")
-      return redirect(url_for('all_courses', name=name))
-  
-  if course.capacity > len(course.enrollments):
     
-    enrollment = Enrollment(student=student, course=course)
-    db.session.add(enrollment)  
-    db.session.commit()
+    # Get course by ID
+    course = Course.query.get(course_id)
+    
+    # Get student name from request form
+    name = request.form['name']
+    
+    # Load student by name
+    student = loadstudent(name)
+    
+    # Check if an existing student is enrolled
+    existing_student = Enrollment.query.filter_by(student=student, course=course).first()
+    if existing_student:
+        flash("Already enrolled in this course!")
+        return redirect(url_for('all_courses', name=name))
+    
+    # Check if course has capacity
+    if course.capacity > len(course.enrollments):
+        enrollment = Enrollment(student=student, course=course)
+        db.session.add(enrollment)  
+        db.session.commit()
+        return redirect(url_for('all_courses', name = name))
+    else:
+        flash('The course is currently full.')
+        return redirect(url_for('all_courses', name = name))
 
-  else:
-    flash('The course is currently full.')
-
-  return redirect(url_for('all_courses', name = name))
-
-
+# Student: Drop Course
 @app.route('/drop_course/<int:course_id>', methods=['POST'])
 def drop_course(course_id):
+    
+    # Get course by ID
     course = Course.query.get(course_id)
+    
+    # Get student name from request form
     name = request.form['name']
+    
+    # Load student by name
     student = loadstudent(name)
-
-    enrollment = Enrollment.query.filter_by(student=student, course=course).first()
-
-    if enrollment:
-        db.session.delete(enrollment)
+    
+    # Check if the student is enrolled in the course
+    enrolled = Enrollment.query.filter_by(student=student, course=course).first()
+    if enrolled:
+        db.session.delete(enrolled)
         db.session.commit()
         return redirect(url_for('all_courses', name=name))
     else:
         flash('You are not enrolled in this course.')
         return redirect(url_for('all_courses', name=name))
 
+# Teacher: View
+@app.route('/teacher/<int:teacher_id>')
+def teacher_view(teacher_id):
+    
+    # Get teacher by ID
+    teacher = Teacher.query.get(teacher_id)  
+    
+    # Retrieve courses they teach
+    courses = teacher.courses
+    
+    # Render info in teacher html
+    return render_template('teacher.html', teacher=teacher, courses=courses)
 
+# Teacher: Display all Enrollments
+@app.route('/teacher/course/<int:course_id>')
+def teacher_all(course_id):
+    
+    # Get course by ID
+    course = Course.query.get(course_id)
+    
+    # Retrieve all students enrolled in the course
+    enrollments = Enrollment.query.filter_by(course_id=course.id).all()  
+    
+    # Retrieve teacher associated with the course
+    teacher = course.teacher
+    
+    # Render information on teacherall html
+    return render_template('teacherall.html', course=course, enrollments=enrollments, teacher=teacher)
 
-@app.route('/portal/<name>')
-def portal(name):
-    return 'Welcome teacher %s' % name
+# Teacher: Edit Grades
+@app.route('/edit_grades', methods=['POST'])
+def edit_grades():
+    
+    # Get course ID via form
+    course_id = request.form.get('course_id')
+    
+    # Get course by ID
+    course = Course.query.get(course_id)
+
+    # Edit grades   based on form data
+    for enrollment in course.enrollments:
+        student_id = enrollment.student.id
+        new_grade = request.form.get(f'grade_{student_id}')
+        
+        if new_grade is not None:  # Check if a grade is provided
+            enrollment.grade = new_grade
+
+    # Commit changes to database
+    db.session.commit()
+
+    # Redirect to teacher_all
+    return redirect(url_for('teacher_all', course_id=course_id))
+
 
 
 
