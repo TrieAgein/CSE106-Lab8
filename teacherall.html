@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  
+<!--Tab Name -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Portal</title>
+</head>
+
+<!--Page Name -->
+<h1> Teacher Portal </h1>
+
+<!-- Navigation bar -->
+<ul class="nav">
+  <li><a href="{{ url_for('teacher_view',teacher_id=teacher.id) }}"> Back </a></li>
+  <li><a href="{{url_for('login')}}"> Logout </a></li>
+</ul>
+
+<!--Intended to tell users about what courses they teach -->
+<h2> {{ course.courseName }}</h2>
+
+<!-- Table for editing student grades -->
+<table>
+  <tr>
+    <th>Enrolled Students</th>
+    <th>Grades</th>
+  </tr>
+
+  {% for enrollment in enrollments %}
+    <tr>
+      <td>{{ enrollment.student.studentName }}</td> 
+      <td>
+        <form method="POST" action="{{ url_for('edit_grades') }}">
+          <input type="hidden" name="course_id" value="{{ course.id }}">
+          <input type="text" name="grade_{{ enrollment.student.id }}" value="{{ enrollment.grade }}" required>
+          <button type="submit">Save</button>
+        </form>        
+      </td>
+    </tr>
+  {% endfor %}
+  
+</table>
+
+</html>
+

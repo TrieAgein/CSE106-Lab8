@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  
+<!--Tab Name -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Portal</title>
+</head>
+
+<!--Page Name -->
+<h1> Teacher Portal </h1>
+
+<!-- Navigation bar -->
+<ul class="nav">
+  <li><a href="{{url_for('login')}}"> Logout </a></li>
+</ul>
+
+<!--Intended to tell users about what courses they teach -->
+<h2> Courses</h2>
+
+<!-- Table for Course Info, with clickable Courses -->
+<table>
+  <tr>
+    <th>Course Name</th>
+    <th>Teacher</th> 
+    <th>Time</th>
+    <th>Enrolled Students</th>
+  </tr>
+  
+  {% for course in courses %}
+  <tr>
+    <td><a href="{{ url_for('teacher_all', course_id=course.id) }}">{{ course.courseName }}</a></td>
+    <td>{{ course.teacher.teacherName }}</td>
+    <td>{{ course.time }}</td> 
+    <td>{{ course.enrollments|length }} / {{ course.capacity }}</td>
+  </tr>
+  {% endfor %}
+  
+</table>
+
+</html>
+
