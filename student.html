@@ -5,40 +5,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="https://kit.fontawesome.com/182976f003.js" crossorigin="anonymous"></script>
   <title>Student Portal</title>
 </head>
 
-<!--Page Name -->
-<h1> Student Portal </h1>
+<body>
+  <!-- Navigation bar -->
+  <div class="nav">
+    <div class="welcome">
+      <p class="thick">Welcome, {{student.studentName}}</p>
+    </div>
+    <li><a href="{{ url_for('student_view', name=current_user.studentName) }}"><i class="fa-solid fa-user fa-lg"></i><br></br>My Courses</a></li>
+    <li><a href="{{ url_for('all_courses', name = current_user.studentName) }}"><i class="fa-solid fa-pen-ruler fa-lg"></i><br></br>Register for Courses</a></li>
+    <li><a href="{{url_for('login')}}"><i class="fa-solid fa-door-open fa-lg"></i><br></br>Logout</a></li>
+  </div>
 
-<!-- Navigation bar -->
-<ul class="nav">
-  <li><a href="{{ url_for('student_view', name=current_user.studentName) }}">My Courses</a></li>
-  <li><a href="{{ url_for('all_courses', name = current_user.studentName) }}">All Available Courses</a></li>
-  <li><a href="{{url_for('login')}}"> Logout </a></li>
-</ul>
 
-<!--Intended to tell users about what courses they have -->
-<h2>My Courses</h2>
+  <div class="main">
+  <!--Intended to tell users about what courses they have -->
 
-<!-- Table for all courses student is enrolled in -->
-<table>
-  <tr>
-    <th>Course Name</th>
-    <th>Teacher</th> 
-    <th>Time</th>
-    <th>Enrolled Students</th>
-  </tr>
-  
-  {% for course in courses %}
-  <tr>
-    <td>{{ course.courseName }}</td>
-    <td>{{ course.teacher.teacherName }}</td>
-    <td>{{ course.time }}</td> 
-    <td>{{ course.enrollments|length }} / {{ course.capacity }}</td>
-  </tr>
-  {% endfor %}
-  
-</table>
+  <table>
+    <tr>
+      <tr>
+        <th colspan="5">Registered Courses</th>
+      </tr>
+      <th>Course Name</th>
+      <th>Teacher</th> 
+      <th>Time</th>
+      <th>Enrolled Students</th>
+      <th>Drop Course</th>
+    </tr>
+    
+    {% for course in courses %}
+    <tr>
+      <td>{{ course.courseName }}</td>
+      <td>{{ course.teacher.teacherName }}</td>
+      <td>{{ course.time }}</td> 
+      <td>{{ course.enrollments|length }} / {{ course.capacity }}</td>
+      <td>
+        <form action="{{ url_for('drop_course', course_id=course.id) }}" method="POST">
+          <input type="hidden" name="name" value="{{ current_user.studentName }}">
+          <button class="fill" type="submit"><i class="fa-solid fa-user-minus fa-xl"></i></button>
+        </form>
+    </td>
+    </tr>
+    {% endfor %}
+    
+  </table>
+  </div>
+
+</body>
+
 
 </html>
