@@ -111,7 +111,7 @@ class TeacherView(ModelView):
         },
         'email': {
             'label': 'Teacher Email',
-            'description': 'Enter teachers email. (fomat "@EDUteacher" )'
+            'description': 'Enter teachers email. (fomat "@EDUteacher.org" )'
         },
         'password': {
             'label': 'Password',
@@ -209,7 +209,7 @@ def register_backend():
 
     if account_type == "teacher":
         existing_user = Teacher.query.filter_by(email=email).first()
-        if not email.endswith("@EDUteacher"):
+        if not email.endswith("@EDUteacher.org"):
             return jsonify({"error": "Incorrect teacher email handle"}), 400
 
     else:
@@ -220,7 +220,7 @@ def register_backend():
 
 
     # Check if the email ends with "@eduteacher"
-    if email.endswith("@EDUteacher"):
+    if email.endswith("@EDUteacher.org"):
         role = 'teacher'
     else:
         role = 'student'
@@ -235,7 +235,7 @@ def register_backend():
     db.session.add(new_user)
     db.session.commit()
 
-    return render_template('registration_success.html')
+    return render_template('index.html')
 
 
 @app.route("/login_backend", methods=["POST"])
@@ -244,7 +244,7 @@ def login_backend():
     Email = request.form['email']
     Password = request.form['password']
 
-    if Email.endswith("@EDUteacher"):
+    if Email.endswith("@EDUteacher.org"):
         user = Teacher.query.filter_by(email=Email).first()
 
     elif Email.endswith("@admin"):
@@ -260,7 +260,7 @@ def login_backend():
                 # role is 'admin'                   #this line is where token verification would go
                 return redirect(url_for('admin'))
 
-            elif Email.endswith("@EDUteacher"):
+            elif Email.endswith("@EDUteacher.org"):
                 # role is 'teacher'                 #this line is where token verification would go
                 return redirect(url_for('portal', name=user.teacherName))
 
@@ -314,7 +314,8 @@ def add_course(course_id):
   
   existing = Enrollment.query.filter_by(student=student, course=course).first()
   if existing:
-      flash("Already enrolled in this course!") 
+      flash("Already enrolled in this course!")
+      return redirect(url_for('all_courses', name=name))
   
   if course.capacity > len(course.enrollments):
     
