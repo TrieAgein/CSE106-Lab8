@@ -1,10 +1,11 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.sqla.ajax import QueryAjaxModelLoader
 from sqlalchemy import CheckConstraint
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 
 #flask --app app run   use this to run app
 # http://127.0.0.1:5000/ # link to webaddress
@@ -19,7 +20,7 @@ admin = Admin(app)
 app.app_context().push() # without this, I recieve flask error
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     studentName = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(30), unique=True, nullable=False)
@@ -29,6 +30,9 @@ class User(db.Model):
 
     def __repr__(self): # how database relationship User is printed out
        return f"s: '{self.studentName}'"
+    
+    def get_id(self):
+        return str(self.id)
 
 class Teacher(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -74,6 +78,7 @@ class Course(db.Model):
     teacher_id = db.Column(db.Integer, db.ForeignKey('teacher.id'), nullable=False)
     teacher = db.relationship("Teacher", back_populates="courses" )
 
+    counter = db.Column(db.Integer, nullable = False, default = 0)
     def __repr__(self): # how database User is printed out
         return f"Course: '{self.courseName}'"
 
@@ -195,6 +200,10 @@ def login():
 def register():
     return render_template('register.html')
 
+@app.route('/courses')
+def courses():
+    return render_template('course_registration.html')
+
 @app.route('/run')
 def run():
 	return "<p>Is indeed running page</p>"
@@ -265,15 +274,17 @@ def login_backend():
 
             elif Email.endswith("@EDUteacher"):
                 # role is 'teacher'                 #this line is where token verification would go
+                # Store the user ID in the session
+                session['user_id'] = user.teacherName
                 return redirect(url_for('portal', name=user.teacherName))
 
             else:
                 pass
                 # role is 'student'                 #this line is where token verification would go
-
-
-            #return f"Logged in as {user.username} with role {user.role}"
-            return redirect(url_for('success', name=user.studentName))
+                #return f"Logged in as {user.username} with role {user.role}"
+                # Store the user ID in the session
+                session['user_id'] = user.studentName
+                return redirect(url_for('success', name=user.studentName))
 
         else:
             return jsonify({"error": "Password is not correct"}), 404
@@ -292,27 +303,43 @@ def portal(name):
 
 
 
-# @app.route('/register_course/<int:course_id>', methods=['POST'])
-# def register_course(course_id):
-#     course = Course.query.get(course_id)
+@app.route('/register_course', methods=['POST'])
+def register_course():
+    course_name = request.form.get("course_name")
+    student_name = request.form.get("student_name")
 
-#     if course.capacity > 0:
-#         # Decrease the capacity
-#         course.capacity -= 1
+    course = Course.query.filter_by(courseName=course_name).first()
+    print(course_name)
 
-#         # Get the currently logged in user (you need to implement user authentication)
-#         user = User.query.get(current_user.id)
+    if not course:
+        return "Course not found. Please check the course name."
 
-#         # Create enrollment
-#         enrollment = Enrollment(student=user, course=course)
+    student = User.query.filter_by(studentName=student_name).first()
 
-#         # Add to the database
-#         db.session.add(enrollment)
-#         db.session.commit()
+    if not student:
+        return "Student not found. Please check the student name."
 
-#         return redirect(url_for('home'))
-#     else:
-#         return "Course is full!"
+    if course.capacity > course.counter:  # Check if there is still space in the course
+        # Check if the user is already enrolled in the course
+        existing_enrollment = Enrollment.query.filter_by(student_id=student.id, course_id=course.id).first()
+        if existing_enrollment:
+            return "You are already enrolled in this course."
+
+        # Create an enrollment for the student
+        enrollment = Enrollment(student_id=student.id, course_id=course.id)
+
+        # Add the enrollment to the database
+        db.session.add(enrollment)
+        db.session.commit()
+
+        # Increase the counter for the course after successful enrollment
+        course.counter += 1
+        db.session.commit()
+
+        return redirect(url_for('courses'))  # Redirect to the home page or any other appropriate route
+    else:
+        return "Course is full! Cannot enroll more students."
+
 
 
 if __name__ == '__main__':
