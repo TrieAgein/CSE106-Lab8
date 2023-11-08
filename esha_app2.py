@@ -359,10 +359,10 @@ def drop_course(course_id):
     if enrolled:
         db.session.delete(enrolled)
         db.session.commit()
-        return redirect(url_for('all_courses', name=name))
+        return redirect(url_for('student_view', name=name))
     else:
         flash('You are not enrolled in this course.')
-        return redirect(url_for('all_courses', name=name))
+        return redirect(url_for('student_view', name=name))
 
 # Teacher: View
 @app.route('/teacher/<int:teacher_id>')
