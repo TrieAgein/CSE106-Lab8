@@ -5,23 +5,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="https://kit.fontawesome.com/182976f003.js" crossorigin="anonymous"></script>
   <title>Teacher Portal</title>
+
 </head>
 
-<!--Page Name -->
-<h1> Teacher Portal </h1>
-
+<body>
 <!-- Navigation bar -->
-<ul class="nav">
-  <li><a href="{{url_for('login')}}"> Logout </a></li>
-</ul>
+<div class="nav" style="padding-top: 580px;">
+  <div class="welcome">
+    <p class="thick">Welcome, Professor {{teacher.teacherName}}</p>
+  </div>
+  <li><a href="{{url_for('login')}}"><i class="fa-solid fa-door-open fa-lg"></i><br></br>Logout</a></li>
+</div>
 
 <!--Intended to tell users about what courses they teach -->
-<h2> Courses</h2>
+<div class="main">
 
 <!-- Table for Course Info, with clickable Courses -->
 <table>
   <tr>
+    <tr>
+      <th colspan="4">Courses</th>
+    </tr>
     <th>Course Name</th>
     <th>Teacher</th> 
     <th>Time</th>
@@ -39,5 +46,8 @@
   
 </table>
 
+</div>
+</body>
 </html>
+
 
