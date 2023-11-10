@@ -11,12 +11,21 @@
     </script>
 
     <title>Register here</title>
-</head>
+</head> 
 <body>
 
-    <div class="loginBox">
+    <div class="loginBox" style="height: 600px;">
     <i class="fa-solid fa-torii-gate fa-2xl"></i>
-    <p class="thick" style="display: inline-block">Create Your Weeb Lovers Account</p>
+    <h2 class="thick" style="display: inline-block">Create Your Weeb Lovers Account</h2>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div style="color:red; text-align: center;" class="notification is-danger">
+            {{ messages[0] }} <br> Go to <a href="{{ url_for('login')}}">Login Page
+            </a>
+        </div>
+    {% endif %}
+    {% endwith %}
 
     <form action="{{ url_for('register_backend') }}" method="post" >
         
@@ -43,9 +52,11 @@
         
         <br>
 
-        <input type="submit" value="Create">
+        <input type="submit" value="create">
         <p id="updateDisplay" style="display:none;"></p>
     </form>
+
+    <br></br>
 
     <p>Already have an account?</p>
     <a href="{{ url_for('login') }}">Login</a>

@@ -1,10 +1,12 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash, session, abort
 from flask_sqlalchemy import SQLAlchemy
-from flask_admin import Admin
+from flask_admin import Admin, AdminIndexView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.sqla.ajax import QueryAjaxModelLoader
 from sqlalchemy import CheckConstraint
 from werkzeug.security import generate_password_hash, check_password_hash
+
+from flask_login import UserMixin, LoginManager, current_user, login_user, logout_user, login_required
 
 #flask --app app run   use this to run app
 # http://127.0.0.1:5000/ # link to webaddress
@@ -14,12 +16,31 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///example.sqlite"
 app.config["SECRET_KEY"] = "mysecret"
 db = SQLAlchemy(app)
-admin = Admin(app)
+
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login' #routes to this when unauthenticated
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    check = session.get('admin', None)
+    check2 = session.get('teacher', None)
+    if check == True:
+        return AdminLogin.query.get(int(user_id))
+    elif check2 == True:
+        return Teacher.query.get(int(user_id))
+    else:
+        return User.query.get(int(user_id))
+
 
 app.app_context().push() # without this, I recieve flask error
 
 
-class User(db.Model):
+#  ------------------------------------------------------------------------------------------  #
+
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     studentName = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(30), unique=True, nullable=False)
@@ -30,7 +51,21 @@ class User(db.Model):
     def __repr__(self): # how database relationship User is printed out
        return f"s: '{self.studentName}'"
 
-class Teacher(db.Model):
+    def get_id(self):
+        return str(self.id)
+
+    @property
+    def is_authenticated(self):
+        # Replace with your authentication logic
+        return True
+
+    @property
+    def is_active(self):
+        # Replace with your activation logic
+        return True
+
+
+class Teacher(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     teacherName = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(30), unique=True, nullable=False)
@@ -42,11 +77,27 @@ class Teacher(db.Model):
     def __repr__(self):
         return f"T: {self.teacherName} "
 
-class AdminLogin(db.Model):
+    @property
+    def is_active(self):
+        # For simplicity, always consider the teacher account as active
+        return True
+
+    def get_id(self):
+        return str(self.id)
+
+class AdminLogin(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(30), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), default='admin')
+
+    @property
+    def is_active(self):
+        # For simplicity, always consider the teacher account as active
+        return True
+
+    def get_id(self):
+        return str(self.id)
 
 
 class Enrollment(db.Model):
@@ -79,7 +130,10 @@ class Course(db.Model):
 
 #  ------------------------------------------------------------------------------------------  #
 
+
 class UserView(ModelView):
+    # def is_accessible(self):
+        # return current_user.is_authenticated and current_user.role == 'admin'
     #pass
     form_columns = ["studentName", "email", "password", "role"]  #should not display passwords
     column_list = ["studentName","email" ,"password", "role"]
@@ -100,10 +154,11 @@ class UserView(ModelView):
             'label': 'Role',
             'description': 'Students default role is "student".',
         },
-
     }
 
 class TeacherView(ModelView):
+    # def is_accessible(self):
+        # return current_user.is_authenticated and current_user.role == 'admin'
     #pass
     form_columns = ["teacherName", "email", "password", "role"]  #should not display passwords
     column_list = ["teacherName", "email", "password", "role"]
@@ -128,6 +183,8 @@ class TeacherView(ModelView):
     }
 
 class CourseView(ModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.role == 'admin'
     #pass
     form_columns = ["courseName", "teacher", "time", "capacity"]
     column_list = ["courseName", "teacher", "time", "capacity"]
@@ -158,6 +215,8 @@ class CourseView(ModelView):
 
 
 class EnrollmentView(ModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.role == 'admin'
     #pass
     form_columns = ["student", "course", "grade" ]  
     column_list = ["student", "course", "grade" ]
@@ -176,12 +235,43 @@ class EnrollmentView(ModelView):
         },
     }
 
+class AdminLoginView(ModelView):
+    # def is_accessible(self):
+        # return current_user.is_authenticated and current_user.role == 'admin'
+    pass
+
+from flask import current_app
+
+class MyAdminIndexView(AdminIndexView):
+    @expose('/')
+    def index(self):   #changing index to another name breaks admin permission access
+        role = session.get('role', None)
+
+        if current_user.is_authenticated:
+            print(f"----email-----{current_user.email}")
+            print(f"----role-----{current_user.role}")
+            print(f"----session.role-----{role}")
+
+            if current_user.role == 'admin' and role == 'admin':
+                # Print the session role before redirecting
+                return super(MyAdminIndexView, self).index()
+            else:
+                flash('You do not have permission to access this page.')
+                return redirect(url_for('login'))
+
+        else:
+            flash('You have to login.')
+            return redirect(url_for('login'))
+
+
+admin = Admin(app, index_view=MyAdminIndexView())
+
 
 admin.add_view(UserView(User, db.session))
 admin.add_view(TeacherView(Teacher, db.session))
 admin.add_view(CourseView(Course, db.session))
 admin.add_view(EnrollmentView(Enrollment, db.session))
-admin.add_view(ModelView(AdminLogin, db.session))
+admin.add_view(AdminLoginView(AdminLogin, db.session))
 
 @app.route('/')
 def launch():
@@ -212,18 +302,20 @@ def register_backend():
 
     if account_type == "teacher":
         existing_user = Teacher.query.filter_by(email=email).first()
-        if not email.endswith("@EDUteacher"):
+        if not email.endswith("@EDUteacher.org"):
             return jsonify({"error": "Incorrect teacher email handle"}), 400
 
     else:
         existing_user = User.query.filter_by(email=email).first()
 
     if existing_user:
-        return jsonify({"error": "User with this email already exists"}), 400
+        flash('Email address already exists:')
+        return redirect(url_for("register"))
+        #return jsonify({"error": "User with this email already exists"}), 400
 
 
-    # Check if the email ends with "@eduteacher"
-    if email.endswith("@EDUteacher"):
+    # Check if the email ends with "@eduteacher.org"
+    if email.endswith("@EDUteacher.org"):
         role = 'teacher'
     else:
         role = 'student'
@@ -247,7 +339,7 @@ def login_backend():
     Email = request.form['email']
     Password = request.form['password']
 
-    if Email.endswith("@EDUteacher"):
+    if Email.endswith("@EDUteacher.org"):
         user = Teacher.query.filter_by(email=Email).first()
 
     elif Email.endswith("@admin"):
@@ -255,64 +347,284 @@ def login_backend():
 
     else:
         user = User.query.filter_by(email=Email).first()
+
  
     # Check if the email ends with "@type" and assign role at login
     if user is not None:
-        if check_password_hash(user.password, Password):
-            if Email.endswith("@admin"):
-                # role is 'admin'                   #this line is where token verification would go
-                return redirect(url_for('admin'))
+        if not user.password.startswith('$pbkdf2'):
 
-            elif Email.endswith("@EDUteacher"):
-                # role is 'teacher'                 #this line is where token verification would go
-                return redirect(url_for('portal', name=user.teacherName))
+            if (user.password == Password):
+                print("passed commited!")
+                hashed_password = generate_password_hash(Password, method='pbkdf2:sha256')
+                user.password = hashed_password
+                db.session.commit()
+
+        if check_password_hash(user.password, Password):
+
+            # login_user(user, remember=True)  # Use Flask-Login's login_user function here
+            # print(f"----login_user--print-----{current_user}")
+
+
+            if Email.endswith("@admin"):
+                login_user(user, remember=True)
+                session['role'] = 'admin'
+                session['email'] = Email
+                session['admin'] = True
+                session['teacher'] = False
+
+                print(f"----login_user--print-----{current_user}")
+
+                # session_role = session.get('role')
+                # print(f"---F---Session Role: {session_role}")
+                # print(f"---admin-Email---: {user.email}")
+
+                return redirect(url_for('admin.index')) #this is how the admin redirect is set up
+
+            elif Email.endswith("@EDUteacher.org"):
+                login_user(user, remember=True)
+                session['role'] = 'teacher'
+                session['email'] = Email
+                session['teacher'] = True
+                session['admin'] = False
+
+                print(f"----login_user--print-----{current_user}")
+                return redirect(url_for('teacher_view', teacher_id=user.id))
 
             else:
-                pass
-                # role is 'student'                 #this line is where token verification would go
+                login_user(user, remember=True)
+                session['role'] = 'student'
+                session['email'] = Email
+                session['admin'] = False
+                session['teacher'] = False
 
-
-            #return f"Logged in as {user.username} with role {user.role}"
-            return redirect(url_for('success', name=user.studentName))
+                #return f"Logged in as {user.username} with role {user.role}"
+                return redirect(url_for('student_view', name=user.studentName))
 
         else:
-            return jsonify({"error": "Password is not correct"}), 404
+            flash('Password is incorrect: try again')
+            return redirect(url_for("login"))
+            #return jsonify({"error": "Password is not correct"}), 404
     else:
-        return jsonify({"error": "Invalid request: Email not found or invalid login credentials"}), 404
+        flash('Email not found or invalid login credentials')
+        return redirect(url_for("login"))
+        #return jsonify({"error": "Invalid request: Email not found or invalid login credentials"}), 404
 
 
-@app.route('/success/<name>')
-def success(name):
-    return 'Welcome student %s' % name
+# --------------------------------------------------------------------------------------------------------------- #
 
 
-@app.route('/portal/<name>')
-def portal(name):
-    return 'Welcome teacher %s' % name
+# Function to load a student's name
+def loadstudent(name):
+
+    student = User.query.filter_by(studentName=name).first()
+    return student
 
 
+# Student: View
+@app.route('/student_view/<name>')
+@login_required
+def student_view(name):
+    check = session.get('email', None)
 
-# @app.route('/register_course/<int:course_id>', methods=['POST'])
-# def register_course(course_id):
-#     course = Course.query.get(course_id)
+    # Filter student by name
+    student = User.query.filter_by(studentName=name).first()
 
-#     if course.capacity > 0:
-#         # Decrease the capacity
-#         course.capacity -= 1
+    if student.email != check:
+        flash('You do not have access to this page.')
+        return abort(403) # Abort the request with a 403 Forbidden error
+    
+    # Find what classes they are enrolled into
+    enrollments = Enrollment.query.filter_by(student=student).all()
+    
+    # Extract courses from the student's enrollment
+    courses = [enrollment.course for enrollment in enrollments]
 
-#         # Get the currently logged in user (you need to implement user authentication)
-#         user = User.query.get(current_user.id)
+    # Render it into student html 
+    return render_template('student.html', student=student, courses=courses, current_user=student)
 
-#         # Create enrollment
-#         enrollment = Enrollment(student=user, course=course)
 
-#         # Add to the database
-#         db.session.add(enrollment)
-#         db.session.commit()
+# Student: Display all courses
+@app.route('/all_courses/<name>')
+@login_required
+def all_courses(name):
 
-#         return redirect(url_for('home'))
+    check = session.get('email', None)
+    
+    # Filter student by name
+    student = User.query.filter_by(studentName=name).first()
+
+    if student.email != check:
+        flash('You do not have access to this page.')
+        return abort(403) # Abort the request with a 403 Forbidden error
+    
+    # Retrieve all available courses
+    all_courses = Course.query.all()
+    
+    # Return into student all html
+    return render_template('studentall.html', student=student, courses=all_courses, current_user = student)
+
+
+# Student: Add a Course
+@app.route('/add_course/<int:course_id>', methods=['POST'])
+def add_course(course_id):
+    
+    # Get course by ID
+    course = Course.query.get(course_id)
+    
+    # Get student name from request form
+    name = request.form['name']
+    
+    # Load student by name
+    student = loadstudent(name)
+    
+    # Check if an existing student is enrolled
+    existing_student = Enrollment.query.filter_by(student=student, course=course).first()
+    if existing_student:
+        flash("Already enrolled in this course!")
+        return redirect(url_for('all_courses', name=name))
+    
+    # Check if course has capacity
+    if course.capacity > len(course.enrollments):
+        enrollment = Enrollment(student=student, course=course)
+        db.session.add(enrollment)  
+        db.session.commit()
+        return redirect(url_for('all_courses', name = name))
+    else:
+        flash('The course is currently full.')
+        return redirect(url_for('all_courses', name = name))
+
+
+# Student: Drop Course
+@app.route('/drop_course/<int:course_id>', methods=['POST'])
+def drop_course(course_id):
+    
+    # Get course by ID
+    course = Course.query.get(course_id)
+    
+    # Get student name from request form
+    name = request.form['name']
+    
+    # Load student by name
+    student = loadstudent(name)
+    
+    # Check if the student is enrolled in the course
+    enrolled = Enrollment.query.filter_by(student=student, course=course).first()
+    if enrolled:
+        db.session.delete(enrolled)
+        db.session.commit()
+        return redirect(url_for('student_view', name=name))
+    else:
+        flash('You are not enrolled in this course.')
+        return redirect(url_for('student_view', name=name))
+
+
+# ----------------------------------------------------------------------------- #
+# Teacher: View
+@app.route('/teacher/<int:teacher_id>')
+def teacher_view(teacher_id):
+    check = session.get('teacher', None)
+
+    if check != True:
+        flash('You do not have access to this page.')
+        return abort(403) # Abort the request with a 403 Forbidden error
+
+    # Get teacher by ID
+    teacher = Teacher.query.get(teacher_id)  
+    
+    # Retrieve courses they teach
+    courses = teacher.courses
+    
+    # Render info in teacher html
+    return render_template('teacher.html', teacher=teacher, courses=courses)
+
+# Teacher: Display all Enrollments
+@app.route('/teacher/course/<int:course_id>')
+def teacher_all(course_id):
+    check = session.get('teacher', None)
+
+    if check != True:
+        flash('You do not have access to this page.')
+        return abort(403) # Abort the request with a 403 Forbidden error
+    
+    # Get course by ID
+    course = Course.query.get(course_id)
+    
+    # Retrieve all students enrolled in the course
+    enrollments = Enrollment.query.filter_by(course_id=course.id).all()  
+    
+    # Retrieve teacher associated with the course
+    teacher = course.teacher
+    
+    # Render information on teacherall html
+    return render_template('teacherall.html', course=course, enrollments=enrollments, teacher=teacher)
+
+# Teacher: Edit Grades
+@app.route('/edit_grades', methods=['POST'])
+def edit_grades():
+    
+    # Get course ID via form
+    course_id = request.form.get('course_id')
+    
+    # Get course by ID
+    course = Course.query.get(course_id)
+
+    # Edit grades   based on form data
+    for enrollment in course.enrollments:
+        student_id = enrollment.student.id
+        new_grade = request.form.get(f'grade_{student_id}')
+        
+        if new_grade is not None:  # Check if a grade is provided
+            enrollment.grade = new_grade
+
+    # Commit changes to database
+    db.session.commit()
+
+    # Redirect to teacher_all
+    return redirect(url_for('teacher_all', course_id=course_id))
+
+
+# these are the old portals, they are just here for reference
+
+# @app.route('/success/<name>')
+# @login_required
+# def success(name):
+#     role = session.get('role', None)
+#     print(f"---Success---Session Role: {role}")
+#     if not role == 'student': 
+#         flash('You do not have permission to access this page.')
+#         return redirect(url_for('login'))
+
+
+# @app.route('/portal/<name>')
+# @login_required
+# def portal(name):
+#     role = session.get('role', None)
+#     print(f"---Portal---Session Role: {role}")
+#     if role == 'teacher': 
+#         return 'Welcome teacher %s' % name   #here, return template! do your things
+
 #     else:
-#         return "Course is full!"
+#         flash('You do not have permission to access this page.')
+#         return redirect(url_for('login'))
+
+
+
+@app.route('/logout')
+# @login_required
+def logout():
+    logout_user()
+    role = session.get('role', None)
+    print(f"---LOGOUT---Session Role: {role}")
+    print("-----Loged--out-------")
+
+    session['role'] = None
+    session['email'] = None
+    session['teacher'] = None
+    session['admin'] = None
+    return redirect(url_for("login"))
+
+
+
 
 
 if __name__ == '__main__':
@@ -328,9 +640,10 @@ if __name__ == '__main__':
 # pip install flask-admin
 # pip install -U Flask-SQLAlchemy
 # pip install Flask-Admin[sqla]
-# pip install Werkzeug
+# pip install Werkzeug            #do not pip install individually! copy and paste line 334 right below
 
-# pip install blinker==1.6.2 click==8.1.6 Flask==2.3.2 Flask-Admin==1.6.1 Flask-SQLAlchemy==3.0.5 greenlet==2.0.2 itsdangerous==2.1.2 Jinja2==3.1.2 MarkupSafe==2.1.3 SQLAlchemy==2.0.19 typing_extensions==4.7.1 Werkzeug==2.3.6 WTForms==3.0.1
+# pip install blinker==1.6.2 click==8.1.6 Flask==2.3.2 Flask-Admin==1.6.1 Flask-SQLAlchemy==3.0.5 greenlet==2.0.2 itsdangerous==2.1.2 Jinja2==3.1.2 MarkupSafe==2.1.3 SQLAlchemy==2.0.19 typing_extensions==4.7.1 Werkzeug==2.3.6 WTForms==3.0.1 flask_login==23.2.1
+# pip install flask-bcrypt
 # run this^ will install all thee right packages for this program
 
 

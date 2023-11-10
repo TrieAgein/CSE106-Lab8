@@ -1,7 +1,7 @@
 .loginBox 
 {
     width: 500px;
-    height: 500px;
+    height: 550px;
     margin-left: auto;
     margin-right: auto;
     margin-top: 70px;
@@ -195,4 +195,3 @@ button:hover
     cursor: pointer;
     background: rgba(53, 53, 53, 0.1)    /*  10% opaque green */ 
 }
-
