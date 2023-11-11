@@ -420,7 +420,6 @@ def loadstudent(name):
     return student
 
 
-# Student: View
 @app.route('/student_view/<name>')
 @login_required
 def student_view(name):
@@ -431,16 +430,16 @@ def student_view(name):
 
     if student.email != check:
         flash('You do not have access to this page.')
-        return abort(403) # Abort the request with a 403 Forbidden error
-    
+        return abort(403)  # Abort the request with a 403 Forbidden error
+
     # Find what classes they are enrolled into
     enrollments = Enrollment.query.filter_by(student=student).all()
-    
-    # Extract courses from the student's enrollment
-    courses = [enrollment.course for enrollment in enrollments]
 
-    # Render it into student html 
-    return render_template('student.html', student=student, courses=courses, current_user=student)
+    # Extract courses and grades from the student's enrollment
+    courses_with_grades = [(enrollment.course, enrollment.grade) for enrollment in enrollments]
+
+    # Render it into student html
+    return render_template('student.html', student=student, courses_with_grades=courses_with_grades, current_user=student)
 
 
 # Student: Display all courses
@@ -582,6 +581,29 @@ def edit_grades():
     # Redirect to teacher_all
     return redirect(url_for('teacher_all', course_id=course_id))
 
+@app.route('/teacher/create_course', methods=['GET', 'POST'])
+@login_required
+def create_course():
+    # Check if the logged-in user is a teacher
+    if current_user.role != 'teacher':
+        flash('You do not have permission to access this page.')
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        course_name = request.form['courseName']
+        time = request.form['time']
+        capacity = int(request.form['capacity'])
+
+        # Create a new course and associate it with the logged-in teacher
+        new_course = Course(courseName=course_name, time=time, capacity=capacity, teacher=current_user)
+        db.session.add(new_course)
+        db.session.commit()
+
+        flash('New course created successfully!')
+        return redirect(url_for('teacher_view', teacher_id=current_user.id))
+
+    return render_template('teachercourse.html')
+
 
 # these are the old portals, they are just here for reference
 
@@ -629,6 +651,7 @@ def logout():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
 
 
 

@@ -17,6 +17,7 @@
   <div class="welcome">
     <p class="thick">Welcome, Professor {{teacher.teacherName}}</p>
   </div>
+  <li><a href="{{ url_for('create_course') }}"><i class="fa-solid fa-pen-ruler fa-lg"></i><br></br>Create Courses</a></li>
   <li><a href="{{url_for('logout')}}"><i class="fa-solid fa-door-open fa-lg"></i><br></br>Logout</a></li>
 </div>
 
@@ -45,7 +46,6 @@
   {% endfor %}
   
 </table>
-
 </div>
 </body>
 </html>

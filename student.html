@@ -27,28 +27,27 @@
 
   <table>
     <tr>
-      <tr>
-        <th colspan="5">Registered Courses</th>
-      </tr>
       <th>Course Name</th>
-      <th>Teacher</th> 
+      <th>Teacher</th>
       <th>Time</th>
       <th>Enrolled Students</th>
+      <th>Grade</th>
       <th>Drop Course</th>
     </tr>
     
-    {% for course in courses %}
+    {% for course, grade in courses_with_grades %}
     <tr>
       <td>{{ course.courseName }}</td>
       <td>{{ course.teacher.teacherName }}</td>
-      <td>{{ course.time }}</td> 
+      <td>{{ course.time }}</td>
       <td>{{ course.enrollments|length }} / {{ course.capacity }}</td>
+      <td>{{ grade }}</td>
       <td>
         <form action="{{ url_for('drop_course', course_id=course.id) }}" method="POST">
           <input type="hidden" name="name" value="{{ current_user.studentName }}">
           <button class="fill" type="submit"><i class="fa-solid fa-user-minus fa-xl"></i></button>
         </form>
-    </td>
+      </td>
     </tr>
     {% endfor %}
     
