@@ -18,13 +18,18 @@
     <i class="fa-solid fa-torii-gate fa-2xl"></i>
     <h2 class="thick" style="display: inline-block">Create Your Weeb Lovers Account</h2>
 
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-        <div style="color:red; text-align: center;" class="notification is-danger">
-            {{ messages[0] }} <br> Go to <a href="{{ url_for('login')}}">Login Page
-            </a>
-        </div>
-    {% endif %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'login' %}
+                    <div style="color:red; text-align: center;" class="notification is-danger">
+                        {{ messages[0] }} <br> Go to <a href="{{ url_for('login')}}">Login Page</a>
+                    </div>
+                {% else %}
+                    <div style="color:red; text-align: center;" class="notification is-danger">{{ messages[0] }}</div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
     {% endwith %}
 
     <form action="{{ url_for('register_backend') }}" method="post" >

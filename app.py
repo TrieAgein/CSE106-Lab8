@@ -7,6 +7,7 @@ from sqlalchemy import CheckConstraint
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_login import UserMixin, LoginManager, current_user, login_user, logout_user, login_required
+from datetime import datetime
 
 #flask --app app run   use this to run app
 # http://127.0.0.1:5000/ # link to webaddress
@@ -90,6 +91,7 @@ class AdminLogin(db.Model, UserMixin):
     email = db.Column(db.String(30), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), default='admin')
+    login_timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
     def is_active(self):
@@ -132,11 +134,12 @@ class Course(db.Model):
 
 
 class UserView(ModelView):
-    # def is_accessible(self):
-        # return current_user.is_authenticated and current_user.role == 'admin'
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.role == 'admin'
     #pass
-    form_columns = ["studentName", "email", "password", "role"]  #should not display passwords
-    column_list = ["studentName","email" ,"password", "role"]
+    form_columns = ["studentName", "email", "password", "role"]  
+    column_list = ["studentName","email" , "role"]      #should not display passwords
+    #####column_list = ["studentName", "email", "password" "role"]#### this is onlyincase to show hashing
     form_args = {
         'studentName': {
             'label': 'Student Name',
@@ -157,11 +160,11 @@ class UserView(ModelView):
     }
 
 class TeacherView(ModelView):
-    # def is_accessible(self):
-        # return current_user.is_authenticated and current_user.role == 'admin'
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.role == 'admin'
     #pass
-    form_columns = ["teacherName", "email", "password", "role"]  #should not display passwords
-    column_list = ["teacherName", "email", "password", "role"]
+    form_columns = ["teacherName", "email", "password", "role"]  
+    column_list = ["teacherName", "email", "role"]  #should not display passwords
     form_args = {
         'teacherName': {
             'label': 'Teachers Name',
@@ -303,13 +306,26 @@ def register_backend():
     if account_type == "teacher":
         existing_user = Teacher.query.filter_by(email=email).first()
         if not email.endswith("@EDUteacher.org"):
-            return jsonify({"error": "Incorrect teacher email handle"}), 400
+            # return jsonify({"error": "Incorrect teacher email handle"}), 400
+            flash('Incorrect teacher email handle')
+            return redirect(url_for("register"))
+
+    elif account_type == "student":
+        existing_user = Teacher.query.filter_by(email=email).first()
+        existing_user2 = AdminLogin.query.filter_by(email=email).first()
+        if existing_user or existing_user2:
+            flash('Email is already registered.', 'login')
+            return redirect(url_for("register"))
+
+        if email.endswith("@EDUteacher.org"):
+            flash('invalid student email domain.')
+            return redirect(url_for("register"))   
 
     else:
         existing_user = User.query.filter_by(email=email).first()
 
     if existing_user:
-        flash('Email address already exists:')
+        flash('Email address already exists:', 'login')
         return redirect(url_for("register"))
         #return jsonify({"error": "User with this email already exists"}), 400
 
@@ -420,6 +436,7 @@ def loadstudent(name):
     return student
 
 
+# Student: View
 @app.route('/student_view/<name>')
 @login_required
 def student_view(name):
@@ -430,11 +447,11 @@ def student_view(name):
 
     if student.email != check:
         flash('You do not have access to this page.')
-        return abort(403)  # Abort the request with a 403 Forbidden error
-
+        return abort(403) # Abort the request with a 403 Forbidden error
+    
     # Find what classes they are enrolled into
     enrollments = Enrollment.query.filter_by(student=student).all()
-
+    
     # Extract courses and grades from the student's enrollment
     courses_with_grades = [(enrollment.course, enrollment.grade) for enrollment in enrollments]
 
@@ -520,6 +537,7 @@ def drop_course(course_id):
 # ----------------------------------------------------------------------------- #
 # Teacher: View
 @app.route('/teacher/<int:teacher_id>')
+@login_required
 def teacher_view(teacher_id):
     check = session.get('teacher', None)
 
@@ -538,6 +556,7 @@ def teacher_view(teacher_id):
 
 # Teacher: Display all Enrollments
 @app.route('/teacher/course/<int:course_id>')
+@login_required
 def teacher_all(course_id):
     check = session.get('teacher', None)
 
@@ -581,6 +600,7 @@ def edit_grades():
     # Redirect to teacher_all
     return redirect(url_for('teacher_all', course_id=course_id))
 
+
 @app.route('/teacher/create_course', methods=['GET', 'POST'])
 @login_required
 def create_course():
@@ -602,40 +622,21 @@ def create_course():
         flash('New course created successfully!')
         return redirect(url_for('teacher_view', teacher_id=current_user.id))
 
-    return render_template('teachercourse.html')
+    return render_template('teachercourse.html', teacher=current_user)
 
-
-# these are the old portals, they are just here for reference
-
-# @app.route('/success/<name>')
-# @login_required
-# def success(name):
-#     role = session.get('role', None)
-#     print(f"---Success---Session Role: {role}")
-#     if not role == 'student': 
-#         flash('You do not have permission to access this page.')
-#         return redirect(url_for('login'))
-
-
-# @app.route('/portal/<name>')
-# @login_required
-# def portal(name):
-#     role = session.get('role', None)
-#     print(f"---Portal---Session Role: {role}")
-#     if role == 'teacher': 
-#         return 'Welcome teacher %s' % name   #here, return template! do your things
-
-#     else:
-#         flash('You do not have permission to access this page.')
-#         return redirect(url_for('login'))
-
-
+import pytz
 
 @app.route('/logout')
-# @login_required
+@login_required
 def logout():
-    logout_user()
+
     role = session.get('role', None)
+    if role == 'admin':
+        current_user.login_timestamp = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(pytz.timezone('US/Pacific'))
+        # current_user.login_timestamp = current_user.login_timestamp.remove('GMT')
+        db.session.commit()
+
+    logout_user()
     print(f"---LOGOUT---Session Role: {role}")
     print("-----Loged--out-------")
 
@@ -643,15 +644,48 @@ def logout():
     session['email'] = None
     session['teacher'] = None
     session['admin'] = None
+
+    flash('You have been successfully logged out.')
     return redirect(url_for("login"))
 
 
 
+# Route to get the count of students
+@app.route('/get_student_count', methods=['GET'])
+def get_student_count():
+    student_count = User.query.filter_by(role='student').count()
+    return jsonify(student_count=student_count)
 
+# Route to get the count of students
+@app.route('/get_teacher_count', methods=['GET'])
+def get_teacher_count():
+    teacher_count = Teacher.query.filter_by(role='teacher').count()
+    return jsonify(teacher_count=teacher_count)
+
+@app.route('/admin_timestamp', methods=['GET'])
+def admin_timestamp():
+    admin_user = AdminLogin.query.get(current_user.id)
+    login_timestamp = admin_user.login_timestamp
+    
+    # Convert to 'US/Pacific' time zone and format without GMT offset
+    pacific_time = login_timestamp.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('US/Pacific'))
+    formatted_timestamp = pacific_time.strftime('%a, %d %b %Y %H:%M:%S')
+
+    return jsonify(login_timestamp=formatted_timestamp)
+
+
+@app.route('/courses_offered', methods=['GET'])
+def courses_offered():
+    courses = Course.query.count()
+    return jsonify(courses=courses)
+
+@app.route('/enrollments', methods=['GET'])
+def enrollments():
+    enrolled = Enrollment.query.count()
+    return jsonify(enrolled=enrolled)
 
 if __name__ == '__main__':
     app.run(debug=True)
-
 
 
 
@@ -667,6 +701,7 @@ if __name__ == '__main__':
 
 # pip install blinker==1.6.2 click==8.1.6 Flask==2.3.2 Flask-Admin==1.6.1 Flask-SQLAlchemy==3.0.5 greenlet==2.0.2 itsdangerous==2.1.2 Jinja2==3.1.2 MarkupSafe==2.1.3 SQLAlchemy==2.0.19 typing_extensions==4.7.1 Werkzeug==2.3.6 WTForms==3.0.1 flask_login==23.2.1
 # pip install flask-bcrypt
+# pip install pytz
 # run this^ will install all thee right packages for this program
 
 

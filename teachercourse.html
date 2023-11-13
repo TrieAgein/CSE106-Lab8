@@ -5,25 +5,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://kit.fontawesome.com/182976f003.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="/static/app.css">
   <title>Create Course</title>
 </head>
 <body>
 
-<h2>Create a New Course</h2>
+<!-- Navigation bar -->
+<div class="nav" style="padding-top: 500px;">
+  <div class="welcome">
+    <p class="thick">Welcome, Professor {{teacher.teacherName}}</p>
+  </div>
+  <li><a href="{{ url_for('teacher_view',teacher_id=teacher.id) }}"><i class="fa-solid fa-reply fa-lg"></i><br></br>Back</a></li>
+  <li><a href="{{url_for('logout')}}"><i class="fa-solid fa-door-open fa-lg"></i><br></br>Logout</a></li>
+</div>
 
-<form action="{{ url_for('create_course') }}" method="post">
-  <label for="courseName">Course Name:</label>
-  <input type="text" id="courseName" name="courseName" required>
 
-  <label for="time">Time:</label>
-  <input type="text" id="time" name="time" required>
+<table class="move">
+  <tr>
+    <th colspan="2">Create a New Course</th>
+  </tr>
+  <tr>
+    <td>
+      <form class="neww" action="{{ url_for('create_course') }}" method="post">
+        <label class="sizes" for="courseName">Course Name:</label>
+        <input class="sizes" type="text" id="courseName" name="courseName" required>
+        <p class="student">'Enter the course name in the format [AAA 100].'</p>
 
-  <label for="capacity">Capacity:</label>
-  <input type="number" id="capacity" name="capacity" required>
+        <label class="sizes" for="time">Time:</label>
+        <input class="sizes" type="text" id="time" name="time" required>
+        <p class="student">'Enter the time in the format [MTWTF #:##-#:## AM].'</p>
 
-  <input type="submit" value="Create Course">
-</form>
+        <label class="sizes" for="capacity">Capacity:</label>
+        <input class="sizes cap" type="number" id="capacity" name="capacity" required>
+        <p class="student">'Enter the maximum number of registrations allowed.'</p>
+
+        <input type="submit" value="Create Course">
+      </form>
+    </td>
+  </tr>
+</table>
+
 
 </body>
 </html>

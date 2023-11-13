@@ -1,0 +1,100 @@
+<!-- admin home html -->
+{% extends 'admin/master.html' %}
+
+{% block head_css %}
+{{ super() }}
+<link href="{{ url_for('static', filename='admin.css') }}" rel="stylesheet" >
+{% endblock %}
+
+
+{% block body %}
+
+<body>
+    <div class="box-container">
+	    <div class="box" >Amount of student Users <br>
+	    	<span class="count" id="studentCountBox">{{ student_count }}</span></div>
+
+	    <div class="box" >Amount of teacher Users <br>
+	    	<span class="count" id="teacherCountBox"> {{ teacher_count }}</span></div>
+
+	    <div class="box">Admin last active <br><br>
+	    	<span class="time" id="admintimestamp">{{ login_timestamp }}</span></div>
+	    <br><br>
+	    <div class="box">Number of courses offered
+	    	<span class="count" id="courses_number">{{ courses }}</span></div>
+
+	    <div class="box">Number of Enrollments
+	    	<span class="count" id="students_enrolled">{{ enrolled }}</span></div>
+
+	    <div class="box"><br>more data soon...</div>
+	    <br><br>
+
+	        <form action="{{ url_for('logout') }}" >
+	            <!-- <p>Logout</p> -->
+	            <input type="submit" value="Logout">
+	        </form>
+
+    </div>
+</body>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Fetch student count
+        fetch('{{ url_for("get_student_count") }}')
+            .then(response => response.json())
+            .then(data => {
+                // Update the content of the student count box
+                document.getElementById('studentCountBox').innerText = `\n ${data.student_count}`;
+            })
+            .catch(error => console.error('Error fetching student count:', error));
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Fetch teacher count
+        fetch('{{ url_for("get_teacher_count") }}')
+            .then(response => response.json())
+            .then(data => {
+                // Update the content of the student count box
+                document.getElementById('teacherCountBox').innerText = `\n ${data.teacher_count}`;
+            })
+            .catch(error => console.error('Error fetching teacher count:', error));
+    });
+
+	document.addEventListener('DOMContentLoaded', function () {
+	    // Fetch teacher count
+	    fetch('{{ url_for("admin_timestamp") }}')
+	        .then(response => response.json())
+	        .then(data => {
+	            // Update the content of the student count box
+	            document.getElementById('admintimestamp').innerText = ` ${data.login_timestamp}`;
+	        })
+	        .catch(error => console.error('Error fetching admin timestamp:', error));
+	});
+
+	document.addEventListener('DOMContentLoaded', function () {
+	    // Fetch teacher count
+	    fetch('{{ url_for("courses_offered") }}')
+	        .then(response => response.json())
+	        .then(data => {
+	            // Update the content of the student count box
+	            document.getElementById('courses_number').innerText = `\n\n ${data.courses}`;
+	        })
+	        .catch(error => console.error('Error fetching courses timestamp:', error));
+	});
+
+	document.addEventListener('DOMContentLoaded', function () {
+	    // Fetch teacher count
+	    fetch('{{ url_for("enrollments") }}')
+	        .then(response => response.json())
+	        .then(data => {
+	            // Update the content of the student count box
+	            document.getElementById('students_enrolled').innerText = `\n\n ${data.enrolled}`;
+	        })
+	        .catch(error => console.error('Error fetching enrolled timestamp:', error));
+	});
+
+
+
+</script>
+
+{% endblock %}

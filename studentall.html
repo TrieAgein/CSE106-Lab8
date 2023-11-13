@@ -26,16 +26,18 @@
   <div class="main">
   <!--Page Name -->
 
-  <!--Area to recieve Flash Messages -->
-  {% for message in get_flashed_messages() %}
-  <div>{{message}}</div>
-  {% endfor %}
+
 
 
   <table>
     <tr>
       <tr>
-        <th colspan="5">Available Courses</th>
+        <th colspan="5">All Available Courses
+          <!--Area to recieve Flash Messages -->
+          {% for message in get_flashed_messages() %}
+          <div style="color: red">{{message}}</div>
+          {% endfor %}
+        </th>
       </tr>
       <th>Course Name</th>
       <th>Teacher</th>
