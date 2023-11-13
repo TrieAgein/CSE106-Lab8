@@ -402,6 +402,7 @@ def login_backend():
                 session['email'] = Email
                 session['teacher'] = True
                 session['admin'] = False
+                session['id'] = user.id
 
                 print(f"----login_user--print-----{current_user}")
                 return redirect(url_for('teacher_view', teacher_id=user.id))
@@ -540,8 +541,9 @@ def drop_course(course_id):
 @login_required
 def teacher_view(teacher_id):
     check = session.get('teacher', None)
+    idCheck = session.get('id', None)
 
-    if check != True:
+    if check != True or idCheck != teacher_id:
         flash('You do not have access to this page.')
         return abort(403) # Abort the request with a 403 Forbidden error
 
@@ -644,6 +646,7 @@ def logout():
     session['email'] = None
     session['teacher'] = None
     session['admin'] = None
+    session['id'] = None
 
     flash('You have been successfully logged out.')
     return redirect(url_for("login"))
